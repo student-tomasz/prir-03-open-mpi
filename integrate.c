@@ -11,6 +11,7 @@ typedef struct _range_t {
 
 void parse_args(const int argc, char *argv[], range_t **glob_rng);
 void calculate_range(const range_t *glob_rng, const int procs_num, const int proc_id, range_t **proc_rng);
+void calculate_ranges(const range_t *glob_rng, const int procs_num, const int proc_id, range_t ***proc_rngs);
 int proc_is_master(const int proc_id);
 int proc_is_last(const int proc_id);
 double integrate(double (*f)(double), const double a, const double b, const int n);
@@ -24,6 +25,7 @@ int main(int argc, char *argv[])
 {
     range_t *glob_rng,
             *proc_rng;
+    range_t **proc_rngs;
     double rslt,
            part_rslt;
 
@@ -38,9 +40,10 @@ int main(int argc, char *argv[])
 
     parse_args(argc, argv, &glob_rng);
     calculate_range(glob_rng, procs_num, proc_id, &proc_rng);
-    part_rslt = integrate(&linear, proc_rng->a, proc_rng->b, proc_rng->n);
+    calculate_ranges(glob_rng, procs_num, proc_id, &proc_rngs);
 
     /* licz part_rslt */
+    part_rslt = integrate(&sin, proc_rng->a, proc_rng->b, proc_rng->n);
     printf("Proces %d obliczyl czesciowy wynik %lf\n", proc_id, part_rslt);
 
     if (proc_is_master(proc_id)) {
@@ -86,7 +89,7 @@ void calculate_range(const range_t *glob_rng, const int procs_num, const int pro
 
     (*proc_rng)->n = points_per_proc;
     if (proc_is_last(proc_id)) {
-        (*proc_rng)->n = glob_rng->n - points_per_proc * (procs_num-1);
+        (*proc_rng)->n = glob_rng->n % points_per_proc;
     }
 
     (*proc_rng)->a = glob_rng->a + h * points_per_proc * proc_id;
